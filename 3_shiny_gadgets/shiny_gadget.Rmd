@@ -1,0 +1,62 @@
+---
+title: "Shiny Gadgets"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+[Shiny Gadgets Webinar Link](https://www.rstudio.com/resources/webinars/shiny-gadgets-interactive-tools/)
+
+## What is a Gadget
+
+- Shiny app: Shiny is a package that enable you to build web application with R.
+
+- Shiny gadgets:
+    - Interactive tool.
+    - run in local session; programming; for data scientists. 
+    - potential: things that are hard to do at the command line, but are part of a reproducible process. i.e. pick a color, more easily down by clicking, draging, etc. 
+    - 3 essential features ~ programming workflow:
+        1. build function to invoke the gadget
+        2. build the gadget UI
+        3. close app and return values to the console
+    
+- Codes to build Gadgets:
+    - essentially, Gadget is a function.
+    - `miniUI` package. 
+    - `runGadget(ui, server)` at the end of function.
+    - title bars: `gadgetTitleBar("Shiny gadget example")`. 
+    - content sizing: `miniContentPanel()`
+    - button block: `miniButtonBlock()`
+    - tab strips: `miniTabstripPanel()`
+
+- `stopApp()`
+    - observeEvent(input\$done, { stopApp(vals\$keep) }): when input\$done change, exit the app, and return the val\$keep.
+    - runGadget(): you can control where to show the gadget
+
+- Addins:
+    - see **Addins** in the tools menu in RStudio.
+    - to create an addin, save the R file as an R package and create a .dcf file in specified directory.
+    - ideas: refer to package: *addinexamples*, *hadladdin*, *rstudioapi*.
+
+
+## Building interactive tools for exploratory data analysis
+
+- Difference between shiny gadgets and shiny apps:
+
+Questions | shiny apps | shiny gadgets
+--------|------------|-----------
+why     | Communicating | Programming
+who     | Decision maker | Analyst
+how     | Deployed   | Invoked
+
+- Example--`get_password()`: capture password without recording it in the history.
+    - key part: `miniPage()`, `stopApp()`, `runGadget()`. Invoke the app by calling the `get_password()` function.
+    - need to use `reactiveValues()` to capture state.
+    - `observerEvent()` lets us update those values.
+
+- Rstudio Addins allows you to call arbitrary code.  
+
+- The potential of gadgets: used for things that are **hard to express** with code but easy to accomplish **reproducibly**. For instance, color picking, plot builder, select points, dynamic filtering. 

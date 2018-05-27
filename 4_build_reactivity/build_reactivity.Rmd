@@ -1,0 +1,182 @@
+---
+title: "Build Reactivity"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## A1: Reactivity - An overview
+
+Shiny Articles: http://shiny.rstudio.com/articles/reactivity-overview.html
+
+In Shiny, there are three kinds of objects in reactive programming:
+    - reactive sources
+    - reactive conductors
+    - reactive endpoints
+
+
+1. Reactive source (implementation of **reactive value**):
+    - typically what user input through a browser interface
+    - accessible through the `input` object
+    - **Reactive values**: implemention of reactive source.
+        - contains values, which can be read by other reactive objects.
+        
+2. Reactive endpoint :
+    - usually something that appears in the user's browser window
+    - accessible through the `output` object
+    - **Observers**: implementaion of reactive endpoint.
+        - Do not return any values, and therefore do not cache their return values. Instead, they have side effects -- typically this involves sending data to the web browser.
+        
+3. Reactive conductors 
+    - An conductor can be both a parent and child in a graph of the reactive structure. Sources can only be parent, and endpoints can only be children.
+    - Reactive conductors can be useful for encapsulating slow or computationally expensive operations.
+    - **Reactive expressions**: implementation of reactive conductors
+        - cache their return values, to make the app run more efficiently.
+        - `output$number <- renderText({as.numeric(input$n) + 1})`: This might lead you to think that observers do return values. However, the function returned by `renderText()` is acutally not an observer/endpoint. When it is assigned to `output$x`, the function returned by `renderText()` gets automatically wrapped into another function, which is an observer. The wrapper function is used because it needs to do special things to send the data to the browser.
+
+4. Notes:
+    - Whenever reative source changes, reactive endpoint is notified that it needs to re-execute.
+    - Keep in mind that if your application tries to access reactive values or expressions from outisde a reactive context -- that is, outside a reactive expression (`reactive()` or `renderXXX()` call) or an observer (`observeEvent()`) -- then it will result in an error.
+    - **Invalidation arrows** diagram the flow of invalidation events. It can also be said that the child node is a **dependent of** the parent node.
+    - Difference: reactive expressions(conductor) VS. observers(endpoint):
+        - observers respond to reactive flush events, but reactive expressions do not.
+        - reactive expressions return values, but observers do not.
+
+## A2: Stop reactions with isolate()
+
+Shiny Articles: http://shiny.rstudio.com/articles/isolation.html
+
+### Isolation: avoiding dependency
+- Sometimes, it's useful for an observer/endpoint to access a reactive value or expression, but not to take a dependency on it. 
+
+```{r eval=FALSE}
+server <- function(input, output) {
+    output$distPlot <- renderPlot({
+        # Take a dependency on input$goButton
+        input$goButton
+        # Use isolate() to avoid dependency on input$obs
+        dist <- isolate(rnorm(input$obs))
+        hist(dist)
+    })
+     
+} 
+```
+- There are 2 items to note:
+    1. `output$distPlot` both access and take dependency on `input$goButton`.
+    2. `output$distPlot` only access but not take dependency on `input$obs` because of `isolate()`.
+
+- In the example above, you add the following code to prevent it from returning a plot the first time, before the button has been clicked.
+```{r eval=FALSE}
+  output$distPlot <- renderPlot({
+    if (input$goButton == 0)
+      return()
+
+    # plot-making code here
+  })
+```
+- Not only reactive values but also reactive expressions (conductors) can be isolated.
+    
+
+## A3: Execution scheduling
+
+At core of Shiny is its reactive engine: this is how Shiny knows when to re-execute each component of an application. 
+
+### A simple example: reactive source + endpoint
+
+Execution steps for reactivity flow:
+
+1. When reactive values (sources) change, 2 things happend:
+    1. All if it's dependents (endpoints) become invalidated. The observer/endpoint's invalidation flag becomes dirty.
+    2. The invalidation arrow are removed; they are no longer considered to have dependencies.
+2. After becoming invalidated, a *flush* occurs: all invalidated observers re-execute.
+    1. As observers (endpoints) re-executes,it accesses the reactive values (sources), then it takes dependency of that value again. 
+    2. An new invalidation arrow will be established.
+3. As it finishes executing, `output$distPlot` creates a PNG image file, which is sent to the browser, and finally marked as clean (not invalidated).
+
+### An app with reactive conductor: reactive source + conductor + endpoint
+
+Execution steps for conductor:
+
+1. Once reactive values (source) change, reactive expressions (conductors) and observers (endpoints) all become invalidated.
+2. After the invalidation finish, the reactive environment is flushed, so the endpoints re-execute
+3. Suppose endpoint1 re-execute first, and it calls for reactive expression A (conductors). 
+4. Since reactive expression A is also invalidated/dirty, it also re-execute. Reactive expression accesses reactive values (sources), finishes executing, becomes clean, and returns value. Also, Shiny caches the returned value.
+5. Endpoint1 access values returned by reactive expressions, and then finishes executing, and send side effects to the browser.
+6. Next endpoint2 starts re-executing, and it calls for reactive expression A too.
+7. Since reactive expression A is clean, it will not re-execute but simply returns the cached value.
+8. Endpoint 2 access the cached value of reactive expression, then finishes executing, and send side effects to the browser.   
+
+Note:
+    - **Flush events** occur whenever the browser sends data to the server, and then trigger the execution of endpoints.
+    - **Invalidation arrow creation and removal**: after a parent object invaliates its children, the arrows will be removed. New arrows will be created when a reactive object accesses another reactive object.
+    
+## A4: How to understand reactivity in R
+
+Reactivity is what makes your Shiny apps responsive. Understanding reactivity will make you a better Shiny programmer. You'll be able to:
+    1. create more efficient and sophisticated Shiny apps, and
+    2. avoid the errors that come from misusing reactive values in R.
+    
+### Reactivity is unexpected 
+
+Reactivity creates the illusion that changes input values automatically flow to the output. This illusion is amazing, because information in R only travels through *pull* mechanisms, not *push* mechanisms. 
+
+### What is reactivity?
+
+Think of reactivity as a magic trick: reactivity creates the illusion that one thing is happening, when if fact something else is going on. The illusion is that information is being pushed from inputs to outputs. The reality is that Shiny is re-running your R expressions in a carefully scheduled way.
+
+Four maxims to help understand the process:
+
+1. R expressions update themselves, if you ask
+2. Nothing needs to happen instantly
+3. The app must do as little as possible
+4. Think carrier pigeons, not electricity
+    
+### 1. R expressions update themselves, if you force them to.
+
+You must tell R to run the an expression to update itself because R uses a style of execution known as *lazy evaluation*.
+
+To create a reactive web app, all you need to do is mannually re-run the expressions in the app whenever the user makes a change.
+
+### 2. Nothing needs to happen instantly
+
+Instead of watching the user, you could just have your server re-run each expression in the app every few microseconds. That way whenever the user makes a change, an update will follow within a few microseconds. This plan creates the illusion of reactivity without violating the rules of R (output *pull* from input).
+
+This is why your R session becomes busy when you launch a Shiny app. However, Shiny takes this approach one step further. It creates an alert system that lets Shiny know exactly which expressions need to be re-run.
+
+### 3. The app must do as little as possible
+
+If you re-run every expression every few microseconds, you app would quickly become slow and unresponsive, which would destroy the illusion of reactivity. Also If you want your update to run so fast that they appear instantaneous, you'll need to save your computer power for just the one or several expressions that out of date. The question is, how will Shiny know how often should it re-run one expression? which expression becomes out of date and needs re-run?
+
+Shiny solves this problem by creating a **system of alerts** that lets the server know when an expression becomes out of date. The server still checks in on your app every few microseconds, but instead of re-running each expression each time, it only runs the expressions that the alert system has flagged as out of date. This alert system is the key to reactivity.
+
+### 4. Think of carrier pigeons, not electricity
+
+Shiny implements reactivity with two special object classes, `reactivevalues` and `observers`. These two classes behave like regular R values and R expressions with a few exceptions. Whenever an observer uses a reactive value, it registers a **reactive context** with the value. This context contains an expression, called **callback**, to be run if the value ever changes. And the callback expression always command to re-run the observer. 
+
+A single reactive value can hold many reactive contexts if multiple observers use that value.
+
+In R, you change the value of a list by calling a settor function, either `$<-` or `[[<-`. However, reactive value objects are special class of list objects, so they have their own **special settor methods**. These special settor methods includes instructions to send callbacks to the server if the reactive values is set to a new value.
+
+When the server receives the callbacks which indicate a list of observers that have become out of date, the server flushes the invalidation arrow and re-run each out of date observers. 
+
+After the re-run, new context has been registered in `reactivevalues` and finishes the last cycle and is ready to listen to the next cycle. 
+
+In summary, each cycle of reactivity execution behave like this:
+
+1. After the initial access from observer A (obs.A), the reactive value1(react1) registers the context that contains the callback of obs.A.
+2. User changes the value of react1, the special settor function detects the change and send callback of obs.A to the sever. 
+3. The sever receives the callback of obs.A in context of react1, so it flushes the invalidation arrow between them and re-run obs.A. 
+4. The obs.A re-access react1 again during the re-run, and creates a new invalidation arrow and registers a new context contains callbacks of obs.A. 
+
+Instead of re-running every expression in your app every few seconds, the server only needs to check its queue for new callbacks. **The key to this system is speed.** Shiny enacts the pull mechanisum of R so fast that they look like push mechanisms.
+
+
+## A5: Learn about your user with session$clientData
+
+Shiny Article Link: http://shiny.rstudio.com/articles/client-data.html
+
+To access teh `session$clientData` values, you need to add a `session` argument to your server function. 
+
+(The rest is skipped.)

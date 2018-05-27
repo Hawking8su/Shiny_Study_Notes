@@ -1,0 +1,40 @@
+---
+title: "R Markdown integration in the RStudio IDE"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The RStudio IDE contains many features that make it easy to write and run interactive documents.
+
+### 1. File templates
+
+Categories of output you can select to convert your .Rmd file into:
+    - **Document**: a static document
+    - **Presentation**: an ioslides or beamer slideshow
+    - **Shiny**: an interactive document
+    - **From Template**: a format that you have pre-saved as a template
+
+### 2. Using R Markdown (skipped)
+
+### 3. Markdown Quick Reference (skipped)
+
+### 4. The Run Document button
+
+You can edit the .Rmd file while the preview is running. To see your changes, save the .Rmd file. Then click the refresh icon in the top left corner of the preview window.
+
+### 5. Viewer Pane
+
+You can choose to display the output in a dedicated viewer pane.
+
+### 6. Document Options
+
+The gear icon beside "Run document" opens a wizard that lets you customize your interactive document.
+
+### 7. Insert Chunk
+
+### 8. Deploy to shinyapps.io
+
+### 9. The R Markdown console

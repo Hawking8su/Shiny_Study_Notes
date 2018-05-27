@@ -1,0 +1,81 @@
+---
+title: "shinydashboard"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Dashboards in general
+
+You have two packages options for building Shiny dashboards: `flexdashboard` and `shinydashboard`.
+
+This notes focuses on the `shinydashboard`.
+
+
+### shinydashboard webinar notes
+
+webinar links: https://www.rstudio.com/resources/webinars/dynamic-dashboards-with-shiny/
+
+#### What is a data dashboard
+
+A data dashboard can present information efficiently. Make it looks intuitively and attractive. It can be explanantion or exploration emphasis
+
+- How does a dashboard work?
+1. Fetch data
+    - Must be quick: slow fetching are often unacceptable
+    - Data source: Databse (DBI pacakges), Scheduled data dump/summary, Web API (jsonlit, XML packages)
+2. Present data
+    - Numbers, texts, tables, graphs.
+3. Components for explorations
+    - Shiny widgets 
+4. New interative components
+    - DT: interative tables
+    - leaflet: interactive maps
+    - interaction with base R graphics and ggplot2
+
+
+#### What is Shiny?
+- Basics:
+    - R package.
+    - Platform for creating web apps n R
+    - Uses a reactive programming model 
+    - Free software
+
+- Structure:
+    - ui + server => shinyApp(ui, server)
+    - reactive programming
+    
+#### Using shinydashboard
+
+- R package for creating dashboard-style layouts with Shiny
+- Shiny uses Bootstrap for layout -- what is bootstrap?
+- Shinydashboard use AdminLTE
+
+#### The bootstrap grid
+
+- Don't forget your columns!
+- `box` is the main building blocks of shinydashboard. Other types of box: `infoBox()`, `valueBox()`
+
+#### leaflet
+
+- Maps in R: UI: leafletOutput(); Server: renderLeaflet()
+
+#### demo dashboard
+
+#### Deploying your dashboard
+
+Options:
+- Shiny Server(Open source): Run on your own Linux server
+- Shiny Server Pro
+- shinyapps.io: hosted by RStudio in the cloud. 
+
+#### Deploying to shinyapps.io
+
+- shinyapps::deployApp("appdir")
+- or click the Publish button
+
+
+
+
